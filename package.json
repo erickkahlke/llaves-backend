@@ -12,7 +12,8 @@
   "dependencies": {
     "express": "^4.21.2",
     "node-persist": "^4.0.4",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "cors": "^2.8.5"
   },
   "author": "Tu Nombre o Empresa",
   "license": "MIT"
