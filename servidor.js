@@ -1,10 +1,11 @@
 const express = require('express');
-const { Low, JSONFile } = require('lowdb');
-const path = require('path');
+const persist = require('node-persist');
+const dotenv = require('dotenv');
+
+dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Configuración del API key
 const API_KEY = process.env.API_KEY || "mySecretApiKey";
 
 app.use(express.json());
@@ -18,27 +19,39 @@ app.use((req, res, next) => {
   next();
 });
 
-// Configuración de lowdb para usar un archivo local db.json
-const file = path.join(__dirname, 'db.json');
-const adapter = new JSONFile(file);
-const db = new Low(adapter);
-
-// Inicialización de la base de datos con datos por defecto
-async function initDB() {
-  await db.read();
-  db.data = db.data || {
-    gavetas: [
+// Inicializar node-persist en la carpeta "storage"
+persist.init({
+  dir: 'storage',
+  stringify: JSON.stringify,
+  parse: JSON.parse,
+  encoding: 'utf8',
+  logging: false,
+  continuous: true,
+  interval: false
+}).then(async () => {
+  // Inicializar valores por defecto si no existen
+  let gavetas = await persist.getItem('gavetas');
+  if (!gavetas) {
+    gavetas = [
       { id: 1, estado: 'disponible' },
       { id: 2, estado: 'disponible' },
       { id: 3, estado: 'disponible' },
       { id: 4, estado: 'disponible' },
       { id: 5, estado: 'disponible' }
-    ],
-    asignaciones: {}
-  };
-  await db.write();
-}
-initDB();
+    ];
+    await persist.setItem('gavetas', gavetas);
+  }
+  
+  let asignaciones = await persist.getItem('asignaciones');
+  if (!asignaciones) {
+    asignaciones = {};
+    await persist.setItem('asignaciones', asignaciones);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en puerto ${PORT}`);
+  });
+});
 
 /**
  * Endpoint: /asignarGaveta
@@ -50,26 +63,28 @@ app.post('/asignarGaveta', async (req, res) => {
   if (!idCliente) {
     return res.status(400).json({ error: "idCliente es requerido" });
   }
-  
-  await db.read();
-  const { gavetas, asignaciones } = db.data;
+
+  let gavetas = await persist.getItem('gavetas');
+  let asignaciones = await persist.getItem('asignaciones');
+
   // Buscar la primera gaveta disponible
   const gavetaDisponible = gavetas.find(g => g.estado === 'disponible');
   if (!gavetaDisponible) {
     return res.status(400).json({ error: "No hay gavetas disponibles" });
   }
-  
+
   // Generar un código de 6 dígitos
   const codigoApertura = Math.floor(100000 + Math.random() * 900000).toString();
   // Fecha de caducidad a 24 horas desde ahora
   const fechaCaducidad = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   // Generar URL de QR con dimensiones 300x300
   const qrURL = `https://api.qrserver.com/v1/create-qr-code/?data=${codigoApertura}&size=300x300`;
-  
-  // Actualizar estado de la gaveta a ocupada
-  gavetaDisponible.estado = 'ocupada';
-  
-  // Guardar la asignación (sin marcarla como usada)
+
+  // Actualizar el estado de la gaveta a "ocupada"
+  gavetas = gavetas.map(g => (g.id === gavetaDisponible.id ? { ...g, estado: 'ocupada' } : g));
+  await persist.setItem('gavetas', gavetas);
+
+  // Guardar la asignación sin marcarla como usada
   asignaciones[codigoApertura] = {
     idCliente,
     idGaveta: gavetaDisponible.id,
@@ -78,9 +93,8 @@ app.post('/asignarGaveta', async (req, res) => {
     qrURL,
     usado: false
   };
-  
-  await db.write();
-  
+  await persist.setItem('asignaciones', asignaciones);
+
   res.json({
     idCliente,
     gaveta: gavetaDisponible.id,
@@ -102,16 +116,16 @@ app.post('/asignarGaveta', async (req, res) => {
  */
 app.post('/validarCodigo', async (req, res) => {
   const { codigo } = req.body;
-  await db.read();
-  const asignacion = db.data.asignaciones[codigo];
-  
+  let asignaciones = await persist.getItem('asignaciones');
+  const asignacion = asignaciones[codigo];
+
   if (!asignacion || asignacion.usado) {
     return res.json({
       valido: false,
       mensaje: "Código no válido"
     });
   }
-  
+
   res.json({
     valido: true,
     gaveta: asignacion.idGaveta,
@@ -129,23 +143,25 @@ app.post('/actualizarEstado', async (req, res) => {
   if (!idGaveta || !codigo) {
     return res.status(400).json({ error: "idGaveta y codigo son requeridos" });
   }
-  
-  await db.read();
-  const { gavetas, asignaciones } = db.data;
+
+  let gavetas = await persist.getItem('gavetas');
+  let asignaciones = await persist.getItem('asignaciones');
+
   const gaveta = gavetas.find(g => g.id === idGaveta);
   if (!gaveta) {
     return res.status(400).json({ error: "Gaveta no encontrada" });
   }
-  
-  // Marcar la asignación como usada
+
+  // Marcar la asignación como usada (si existe)
   if (asignaciones[codigo]) {
     asignaciones[codigo].usado = true;
+    await persist.setItem('asignaciones', asignaciones);
   }
-  
+
   // Liberar la gaveta
-  gaveta.estado = 'disponible';
-  
-  await db.write();
+  gavetas = gavetas.map(g => (g.id === idGaveta ? { ...g, estado: 'disponible' } : g));
+  await persist.setItem('gavetas', gavetas);
+
   res.json({ mensaje: "Gaveta actualizada a disponible" });
 });
 
@@ -154,8 +170,8 @@ app.post('/actualizarEstado', async (req, res) => {
  * Devuelve el listado de todas las gavetas y, si están ocupadas, la información de la asignación.
  */
 app.get('/estadoGavetas', async (req, res) => {
-  await db.read();
-  const { gavetas, asignaciones } = db.data;
+  let gavetas = await persist.getItem('gavetas');
+  let asignaciones = await persist.getItem('asignaciones');
   const estadoGavetas = gavetas.map(g => {
     if (g.estado === 'disponible') {
       return { idGaveta: g.id, estado: g.estado };
@@ -173,8 +189,4 @@ app.get('/estadoGavetas', async (req, res) => {
     }
   });
   res.json(estadoGavetas);
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
 });

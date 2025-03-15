@@ -1,14 +1,15 @@
 {
   "name": "llaves-qr-servilab-backend",
   "version": "1.0.0",
-  "description": "Backend para el sistema de autoatención para retiro de llaves, utilizando Express y lowdb.",
-  "main": "server.js",
+  "description": "Backend para el sistema de autoatención para retiro de llaves, utilizando Express y node-persist.",
+  "main": "servidor.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node servidor.js"
   },
   "dependencies": {
     "express": "^4.21.2",
-    "lowdb": "^7.0.1"
+    "node-persist": "^4.0.4",
+    "dotenv": "^16.4.7"
   },
   "author": "Tu Nombre o Empresa",
   "license": "MIT"
