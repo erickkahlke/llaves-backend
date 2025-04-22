@@ -78,7 +78,7 @@ app.post('/asignarGaveta', async (req, res) => {
   }
   
   // Generar un código de 6 dígitos
-  const codigoApertura = Math.floor(100000 + Math.random() * 900000).toString();
+  const codigoApertura = Math.floor(100000 + Math.random() * 9000).toString();
   // Fecha de caducidad a 24 horas desde ahora
   const fechaCaducidad = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   // Generar URL de QR con dimensiones 300x300
