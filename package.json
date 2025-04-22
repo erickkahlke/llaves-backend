@@ -15,6 +15,6 @@
     "dotenv": "^16.4.7",
     "cors": "^2.8.5"
   },
-  "author": "Tu Nombre o Empresa",
+  "author": "ServiLab",
   "license": "MIT"
 }
