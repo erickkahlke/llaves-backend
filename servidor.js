@@ -12,13 +12,39 @@ const API_KEY = process.env.API_KEY || "mySecretApiKey";
 app.use(express.json());
 // app.use(cors()); // Deshabilitado - nginx maneja CORS
 
+// Middleware de logging para requests
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const method = req.method;
+  const url = req.originalUrl;
+  const userAgent = req.headers['user-agent'] || 'Unknown';
+  
+  // Log parcial del API key para seguridad (solo primeros 4 caracteres)
+  const apiKey = req.headers['x-api-key'];
+  const apiKeyPartial = apiKey ? `${apiKey.substring(0, 4)}****` : 'None';
+  
+  console.log(`📥 [${timestamp}] ${method} ${url} | IP: ${ip} | API Key: ${apiKeyPartial} | UA: ${userAgent.substring(0, 50)}`);
+  
+  // Hook para logging de respuesta
+  const originalSend = res.send;
+  res.send = function(data) {
+    const responseTime = Date.now() - req.startTime;
+    console.log(`📤 [${timestamp}] ${method} ${url} | Status: ${res.statusCode} | Time: ${responseTime}ms`);
+    originalSend.call(this, data);
+  };
+  
+  req.startTime = Date.now();
+  next();
+});
+
 // Health check endpoint (sin autenticación para monitoring)
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     service: 'llaves-backend',
-    version: '1.0.3'
+    version: '1.0.4'
   });
 });
 
