@@ -17,7 +17,8 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    service: 'llaves-backend'
+    service: 'llaves-backend',
+    version: '1.0.0'
   });
 });
 
