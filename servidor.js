@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3006;
 const API_KEY = process.env.API_KEY || "mySecretApiKey";
 
 app.use(express.json());
-app.use(cors());
+// app.use(cors()); // Deshabilitado - nginx maneja CORS
 
 // Health check endpoint (sin autenticación para monitoring)
 app.get('/health', (req, res) => {
@@ -18,7 +18,7 @@ app.get('/health', (req, res) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     service: 'llaves-backend',
-    version: '1.0.2'
+    version: '1.0.3'
   });
 });
 
