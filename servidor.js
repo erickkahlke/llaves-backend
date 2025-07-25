@@ -6,7 +6,7 @@ const cors = require('cors');
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3006;
 const API_KEY = process.env.API_KEY || "mySecretApiKey";
 
 app.use(express.json());
