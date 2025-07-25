@@ -12,7 +12,16 @@ const API_KEY = process.env.API_KEY || "mySecretApiKey";
 app.use(express.json());
 app.use(cors());
 
-// Middleware para validar el API key en todas las peticiones.
+// Health check endpoint (sin autenticación para monitoring)
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    service: 'llaves-backend'
+  });
+});
+
+// Middleware para validar el API key en todas las peticiones protegidas.
 app.use((req, res, next) => {
   const key = req.headers['x-api-key'];
   if (!key || key !== API_KEY) {
