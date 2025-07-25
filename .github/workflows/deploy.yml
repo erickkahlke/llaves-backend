@@ -27,13 +27,23 @@ jobs:
         host: ${{ secrets.HOST }}
         port: ${{ secrets.PORT }}
         username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_KEY }}
+        key: ${{ secrets.DEPLOY_KEY }}
         script: |
-          # Navigate to app directory
-          cd /var/www/html/servilab/llaves
+          # Create directory if it doesn't exist and navigate
+          mkdir -p /var/www/html/servilab
+          cd /var/www/html/servilab
+          
+          # Clone repository if it doesn't exist, otherwise navigate to it
+          if [ ! -d "llaves" ]; then
+            git clone git@github.com:erickkahlke/llaves-backend.git llaves
+          fi
+          cd llaves
           
           # Stop the application
           pm2 stop llaves || true
+          
+          # Configure git to use deploy key
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_llaves_backend -o StrictHostKeyChecking=no"
           
           # Pull latest changes
           git fetch origin main
