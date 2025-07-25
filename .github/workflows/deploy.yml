@@ -29,12 +29,17 @@ jobs:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.DEPLOY_KEY }}
         script: |
+          # Debug: Check deploy key exists
+          ls -la ~/.ssh/deploy_llaves_backend* || echo "Deploy key not found"
+          
           # Create directory if it doesn't exist and navigate
           mkdir -p /var/www/html/servilab
           cd /var/www/html/servilab
           
           # Clone repository if it doesn't exist, otherwise navigate to it
           if [ ! -d "llaves" ]; then
+            # Set up SSH for GitHub
+            export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_llaves_backend -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
             git clone git@github.com:erickkahlke/llaves-backend.git llaves
           fi
           cd llaves
@@ -43,7 +48,7 @@ jobs:
           pm2 stop llaves || true
           
           # Configure git to use deploy key
-          export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_llaves_backend -o StrictHostKeyChecking=no"
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/deploy_llaves_backend -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           
           # Pull latest changes
           git fetch origin main
