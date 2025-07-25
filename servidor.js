@@ -14,7 +14,16 @@ app.use(express.json());
 
 // Middleware de logging para requests
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
+  const timestampArg = new Date().toLocaleString('es-AR', { 
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
   const ip = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   const method = req.method;
   const url = req.originalUrl;
@@ -24,13 +33,13 @@ app.use((req, res, next) => {
   const apiKey = req.headers['x-api-key'];
   const apiKeyPartial = apiKey ? `${apiKey.substring(0, 4)}****` : 'None';
   
-  console.log(`📥 [${timestamp}] ${method} ${url} | IP: ${ip} | API Key: ${apiKeyPartial} | UA: ${userAgent.substring(0, 50)}`);
+  console.log(`📥 [${timestampArg}] ${method} ${url} | IP: ${ip} | API Key: ${apiKeyPartial} | UA: ${userAgent.substring(0, 50)}`);
   
   // Hook para logging de respuesta
   const originalSend = res.send;
   res.send = function(data) {
     const responseTime = Date.now() - req.startTime;
-    console.log(`📤 [${timestamp}] ${method} ${url} | Status: ${res.statusCode} | Time: ${responseTime}ms`);
+    console.log(`📤 [${timestampArg}] ${method} ${url} | Status: ${res.statusCode} | Time: ${responseTime}ms`);
     originalSend.call(this, data);
   };
   
@@ -40,11 +49,22 @@ app.use((req, res, next) => {
 
 // Health check endpoint (sin autenticación para monitoring)
 app.get('/health', (req, res) => {
+  const timestampLocal = new Date().toLocaleString('es-AR', { 
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
   res.json({ 
     status: 'ok', 
-    timestamp: new Date().toISOString(),
+    timestamp: timestampLocal,
+    timezone: 'America/Argentina/Buenos_Aires',
     service: 'llaves-backend',
-    version: '1.0.4'
+    version: '1.0.5'
   });
 });
 
@@ -86,7 +106,17 @@ persist.init({
   }
 
   app.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
+    const startTime = new Date().toLocaleString('es-AR', { 
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    console.log(`🚀 [${startTime}] Servidor llaves-backend v1.0.5 iniciado en puerto ${PORT}`);
   });
 });
 
